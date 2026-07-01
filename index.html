@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillGraph — AI Career Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;
+  --yellow:#d29922;--red:#f85149;--purple:#bc8cff;--orange:#f0883e;
+  --radius:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
+
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 28px;position:sticky;top:0;z-index:100}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--green),var(--accent));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-sub{font-size:11px;color:var(--muted);font-weight:400}
+
+main{max-width:1200px;margin:0 auto;padding:32px 24px}
+
+/* ── Hero ── */
+.hero{text-align:center;padding:28px 0 36px}
+.hero h1{font-size:38px;font-weight:900;letter-spacing:-1px;margin-bottom:10px}
+.hero h1 span{background:linear-gradient(135deg,var(--green),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:15px;max-width:480px;margin:0 auto 20px;line-height:1.6}
+
+/* ── Steps UI ── */
+.step-indicator{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px}
+.step-num{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--muted);background:var(--bg2);transition:.3s}
+.step-num.active{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.1)}
+.step-num.done{border-color:var(--green);color:var(--green);background:rgba(63,185,80,.1)}
+.step-line{width:60px;height:2px;background:var(--border)}
+.step-line.done{background:var(--green)}
+.step-label{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+
+/* ── Btn ── */
+.btn{background:var(--accent);border:none;border-radius:6px;color:#000;font-size:13px;font-weight:700;padding:10px 22px;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-ghost{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-green{background:var(--green)}
+.btn-lg{padding:12px 32px;font-size:14px}
+
+/* ── Panel ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}
+.panel-head h3{font-size:14px;font-weight:600}
+.panel-body{padding:18px}
+
+/* ── Skill grid ── */
+.skill-categories{display:flex;flex-direction:column;gap:20px}
+.cat-label{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;font-weight:600}
+.skill-grid{display:flex;flex-wrap:wrap;gap:8px}
+.skill-chip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:13px;transition:.2s;background:var(--bg3);user-select:none}
+.skill-chip:hover{border-color:var(--accent)}
+.skill-chip.selected{border-color:var(--green);background:rgba(63,185,80,.12);color:var(--green);font-weight:600}
+.skill-chip .sk-icon{margin-right:4px}
+
+/* ── Role cards ── */
+.role-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.role-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:.2s;text-align:center}
+.role-card:hover{border-color:var(--accent)}
+.role-card.selected{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.role-icon{font-size:28px;margin-bottom:8px}
+.role-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.role-desc{font-size:11px;color:var(--muted)}
+
+/* ── Results ── */
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.match-score{text-align:center;padding:24px}
+.match-pct{font-size:64px;font-weight:900;line-height:1}
+.match-label{font-size:14px;color:var(--muted);margin-top:4px}
+.match-ring{position:relative;display:inline-block;margin-bottom:8px}
+
+/* ── Gap table ── */
+.gap-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--bg3);font-size:13px}
+.gap-row:last-child{border-bottom:none}
+.gap-name{flex:1;font-weight:500}
+.gap-bar-wrap{width:120px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.gap-bar{height:100%;border-radius:3px}
+.gap-status{font-size:11px;width:70px;text-align:right}
+
+/* ── Roadmap cards ── */
+.roadmap-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.roadmap-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px}
+.roadmap-phase{font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-weight:700}
+.roadmap-title{font-size:13px;font-weight:700;margin-bottom:6px}
+.roadmap-items{font-size:12px;color:var(--muted);line-height:1.7}
+.roadmap-time{font-size:11px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--muted)}
+
+/* ── Radar ── */
+.radar-wrap{height:260px;padding:8px}
+
+/* ── Pane ── */
+.pane{display:none}.pane.active{display:block}
+.hidden{display:none!important}
+
+@media(max-width:700px){.results-grid,.roadmap-grid{grid-template-columns:1fr}.role-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🎯</div>
+      <div>
+        <div>Skill<span style="color:var(--green)">Graph</span></div>
+        <div class="logo-sub">AI Career Intelligence</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="selected-count" style="font-size:13px;color:var(--muted)">0 skills selected</span>
+      <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<div class="hero">
+  <h1>Map your path to your <span>dream role</span></h1>
+  <p>Select your skills, choose a target role, and get a personalized gap analysis and learning roadmap — powered by AI.</p>
+</div>
+
+<!-- Step indicator -->
+<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px">
+  <div class="step-indicator">
+    <div style="text-align:center">
+      <div class="step-num active" id="sn1">1</div>
+      <div class="step-label">Your Skills</div>
+    </div>
+    <div class="step-line" id="sl1"></div>
+    <div style="text-align:center">
+      <div class="step-num" id="sn2">2</div>
+      <div class="step-label">Target Role</div>
+    </div>
+    <div class="step-line" id="sl2"></div>
+    <div style="text-align:center">
+      <div class="step-num" id="sn3">3</div>
+      <div class="step-label">Your Roadmap</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 1: Skills ══ -->
+<div class="pane active" id="pane-skills">
+  <div class="panel">
+    <div class="panel-head"><h3>Select all skills you have experience with</h3><span style="font-size:12px;color:var(--muted)">Click to toggle</span></div>
+    <div class="panel-body">
+      <div class="skill-categories" id="skill-categories"></div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:8px">
+    <button class="btn btn-lg" onclick="goToStep2()">Continue → Choose Target Role</button>
+  </div>
+</div>
+
+<!-- ══ STEP 2: Role ══ -->
+<div class="pane" id="pane-role">
+  <div class="panel">
+    <div class="panel-head"><h3>What role are you targeting?</h3></div>
+    <div class="panel-body">
+      <div class="role-grid" id="role-grid"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:8px;justify-content:center">
+    <button class="btn btn-ghost" onclick="goToStep1()">← Back</button>
+    <button class="btn btn-lg btn-green" id="analyze-btn" onclick="runAnalysis()" disabled>Analyze My Profile →</button>
+  </div>
+</div>
+
+<!-- ══ STEP 3: Results ══ -->
+<div class="pane" id="pane-results">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div>
+      <h2 style="font-size:20px;margin-bottom:4px">Your Career Intelligence Report</h2>
+      <div style="color:var(--muted);font-size:13px" id="results-subtitle"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="goToStep1()">← Edit Skills</button>
+      <button class="btn" onclick="exportReport()">↓ Export</button>
+    </div>
+  </div>
+
+  <div class="results-grid">
+    <div class="panel">
+      <div class="panel-head"><h3>Match Score</h3></div>
+      <div class="panel-body match-score">
+        <div class="match-pct" id="match-pct" style="color:var(--green)">—</div>
+        <div class="match-label" id="match-label">calculating…</div>
+        <div style="margin-top:16px;font-size:13px;color:var(--muted);line-height:1.7" id="match-summary"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Skill Radar</h3></div>
+      <div class="radar-wrap"><canvas id="radar-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-head"><h3>Skill Gap Analysis</h3><span id="gap-summary-label" style="font-size:12px;color:var(--muted)"></span></div>
+    <div class="panel-body" id="gap-table"></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-head"><h3>🗺️ Personalized Learning Roadmap</h3><span style="font-size:12px;color:var(--muted)" id="roadmap-label"></span></div>
+    <div class="panel-body">
+      <div class="roadmap-grid" id="roadmap"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>💡 AI Career Insights</h3><span style="font-size:12px;color:var(--purple)">AI Generated</span></div>
+    <div class="panel-body" id="ai-insights"></div>
+  </div>
+
+</div>
+
+</main>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────
+const SKILL_CATEGORIES = [
+  { name: 'Languages', icon: '💻', skills: ['Python','JavaScript','TypeScript','Java','C++','C#','Go','Rust','SQL','Solidity','R','Swift'] },
+  { name: 'Frontend', icon: '🎨', skills: ['React','Next.js','Vue.js','Angular','HTML/CSS','Tailwind CSS','Redux','GraphQL','WebSockets'] },
+  { name: 'Backend', icon: '⚙️', skills: ['Node.js','Flask','FastAPI','Django','Spring Boot','Express.js','REST APIs','gRPC','Microservices'] },
+  { name: 'AI & Data', icon: '🤖', skills: ['Machine Learning','Deep Learning','NLP','Computer Vision','TensorFlow','PyTorch','Scikit-learn','Pandas','RAG','LLMs','Data Analysis','Prompt Engineering'] },
+  { name: 'Cloud & DevOps', icon: '☁️', skills: ['AWS','Azure','GCP','Docker','Kubernetes','CI/CD','Terraform','Linux','Git','GitHub Actions'] },
+  { name: 'Databases', icon: '🗄️', skills: ['MySQL','PostgreSQL','MongoDB','Redis','SQLite','Firebase','Elasticsearch','Vector DB'] },
+  { name: 'Blockchain', icon: '⛓️', skills: ['Ethereum','Solidity','Smart Contracts','Hyperledger','IPFS','Web3.js','DeFi','NFTs'] },
+  { name: 'PM & Leadership', icon: '📋', skills: ['Agile/Scrum','Jira','Roadmapping','Stakeholder Management','OKRs','Technical Writing','Cross-functional Leadership','Sprint Planning'] },
+];
+
+const ROLES = [
+  { id:'swe', icon:'👩‍💻', name:'Software Engineer', desc:'Full-stack or backend', color:'var(--accent)',
+    required: ['Python','JavaScript','REST APIs','Git','SQL','Docker','Data Structures','System Design'],
+    preferred: ['TypeScript','React','AWS','Kubernetes','CI/CD','Microservices','Redis','GraphQL'] },
+  { id:'tpm', icon:'📋', name:'Technical PM', desc:'Engineering leadership', color:'var(--yellow)',
+    required: ['Agile/Scrum','Jira','Roadmapping','Stakeholder Management','Technical Writing','Cross-functional Leadership'],
+    preferred: ['OKRs','Sprint Planning','Python','SQL','AWS','CI/CD','Data Analysis'] },
+  { id:'ml', icon:'🤖', name:'ML Engineer', desc:'AI/ML systems', color:'var(--purple)',
+    required: ['Python','Machine Learning','TensorFlow','PyTorch','Pandas','SQL','Git','Statistics'],
+    preferred: ['Deep Learning','NLP','Computer Vision','Scikit-learn','Docker','AWS','RAG','LLMs','Prompt Engineering'] },
+  { id:'data', icon:'📊', name:'Data Scientist', desc:'Analytics & insights', color:'var(--orange)',
+    required: ['Python','R','SQL','Pandas','Machine Learning','Data Analysis','Statistics','Visualization'],
+    preferred: ['Deep Learning','NLP','Scikit-learn','Spark','Tableau','AWS','Docker','Jupyter'] },
+  { id:'devops', icon:'⚙️', name:'DevOps Engineer', desc:'Infrastructure & CI/CD', color:'var(--green)',
+    required: ['Linux','Docker','Kubernetes','CI/CD','AWS','Git','Terraform','Bash'],
+    preferred: ['Python','Go','Ansible','Prometheus','Grafana','Azure','Security','Networking'] },
+  { id:'web3', icon:'⛓️', name:'Web3 Developer', desc:'Blockchain & DeFi', color:'var(--orange)',
+    required: ['Solidity','Ethereum','Smart Contracts','JavaScript','Web3.js','Git'],
+    preferred: ['Hyperledger','IPFS','DeFi','NFTs','React','TypeScript','Security','Testing'] },
+  { id:'fullstack', icon:'🌐', name:'Full Stack Dev', desc:'End-to-end development', color:'var(--accent)',
+    required: ['JavaScript','React','Node.js','REST APIs','SQL','Git','HTML/CSS','Docker'],
+    preferred: ['TypeScript','Next.js','PostgreSQL','Redis','AWS','CI/CD','GraphQL','Testing'] },
+  { id:'security', icon:'🔒', name:'Security Engineer', desc:'Cybersecurity & defense', color:'var(--red)',
+    required: ['Linux','Networking','Python','Security','Git','Cryptography','Penetration Testing'],
+    preferred: ['AWS','Docker','SIEM','Incident Response','Malware Analysis','Forensics','Go','Bash'] },
+];
+
+let selectedSkills = new Set();
+let selectedRole = null;
+let radarChart = null;
+
+// ── Build skill UI ────────────────────────────────────────────────────────
+function buildSkillUI() {
+  const container = document.getElementById('skill-categories');
+  container.innerHTML = SKILL_CATEGORIES.map(cat => `
+    <div>
+      <div class="cat-label">${cat.icon} ${cat.name}</div>
+      <div class="skill-grid">
+        ${cat.skills.map(s => `
+          <div class="skill-chip" onclick="toggleSkill(this,'${s}')" data-skill="${s}">
+            ${s}
+          </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleSkill(el, skill) {
+  if (selectedSkills.has(skill)) {
+    selectedSkills.delete(skill);
+    el.classList.remove('selected');
+  } else {
+    selectedSkills.add(skill);
+    el.classList.add('selected');
+  }
+  document.getElementById('selected-count').textContent = `${selectedSkills.size} skills selected`;
+}
+
+// ── Build role UI ─────────────────────────────────────────────────────────
+function buildRoleUI() {
+  document.getElementById('role-grid').innerHTML = ROLES.map(r => `
+    <div class="role-card" onclick="selectRole('${r.id}',this)" id="role-${r.id}">
+      <div class="role-icon">${r.icon}</div>
+      <div class="role-name">${r.name}</div>
+      <div class="role-desc">${r.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selectRole(id, el) {
+  selectedRole = ROLES.find(r=>r.id===id);
+  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────
+function goToStep1() {
+  showPane('skills');
+  setStep(1);
+}
+
+function goToStep2() {
+  if (selectedSkills.size === 0) { alert('Please select at least a few skills!'); return; }
+  showPane('role');
+  setStep(2);
+}
+
+function showPane(name) {
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+}
+
+function setStep(n) {
+  [1,2,3].forEach(i=>{
+    const el = document.getElementById('sn'+i);
+    el.className = 'step-num ' + (i<n?'done':i===n?'active':'');
+    if (i<3) document.getElementById('sl'+i).className = 'step-line'+(i<n?' done':'');
+  });
+}
+
+// ── Analysis ──────────────────────────────────────────────────────────────
+function runAnalysis() {
+  if (!selectedRole) return;
+  setStep(3);
+  showPane('results');
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  document.getElementById('results-subtitle').textContent =
+    `${selectedSkills.size} skills analyzed → ${selectedRole.name}`;
+
+  const required = selectedRole.required;
+  const preferred = selectedRole.preferred;
+  const allNeeded = [...new Set([...required,...preferred])];
+  const userHas = [...selectedSkills];
+
+  const reqHave = required.filter(s=>userHas.includes(s));
+  const prefHave = preferred.filter(s=>userHas.includes(s));
+  const reqMissing = required.filter(s=>!userHas.includes(s));
+  const prefMissing = preferred.filter(s=>!userHas.includes(s));
+
+  const matchPct = Math.round((reqHave.length/required.length)*60 + (prefHave.length/preferred.length)*40);
+
+  // Score display
+  const pctEl = document.getElementById('match-pct');
+  let n=0; const t=setInterval(()=>{ n=Math.min(n+2,matchPct); pctEl.textContent=n+'%'; if(n>=matchPct)clearInterval(t); },30);
+  pctEl.style.color = matchPct>=75?'var(--green)':matchPct>=50?'var(--yellow)':'var(--red)';
+
+  const tier = matchPct>=80?'Strong Match 🎯':matchPct>=60?'Good Foundation 📈':matchPct>=40?'Growing Profile 🌱':'Early Stage 🚀';
+  document.getElementById('match-label').textContent = tier;
+  document.getElementById('match-summary').textContent =
+    `You have ${reqHave.length}/${required.length} required skills and ${prefHave.length}/${preferred.length} preferred skills for ${selectedRole.name}. ${reqMissing.length>0?`Focus on: ${reqMissing.slice(0,3).join(', ')}.`:'All core skills covered!'}`;
+
+  // Radar
+  buildRadar(reqHave, prefHave, required.length, preferred.length);
+
+  // Gap table
+  buildGapTable(required, preferred, userHas, reqMissing, prefMissing);
+
+  // Roadmap
+  buildRoadmap(reqMissing, prefMissing);
+
+  // Insights
+  buildInsights(matchPct, reqHave, reqMissing, prefHave, prefMissing);
+}
+
+function buildRadar(reqHave, prefHave, reqTotal, prefTotal) {
+  const categories = SKILL_CATEGORIES.slice(0,6);
+  const userArr = categories.map(cat => {
+    const have = cat.skills.filter(s=>selectedSkills.has(s)).length;
+    return Math.round((have/cat.skills.length)*100);
+  });
+  const roleArr = categories.map(cat => {
+    const needed = [...selectedRole.required,...selectedRole.preferred].filter(s=>cat.skills.includes(s)).length;
+    return Math.min(Math.round((needed/3)*100),100);
+  });
+
+  if (radarChart) radarChart.destroy();
+  const ctx = document.getElementById('radar-chart').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type:'radar',
+    data:{
+      labels: categories.map(c=>c.name),
+      datasets:[
+        {label:'Your Skills',data:userArr,borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,.15)',pointBackgroundColor:'#3fb950',borderWidth:2,pointRadius:4},
+        {label:'Role Needs',data:roleArr,borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,.1)',pointBackgroundColor:'#58a6ff',borderWidth:2,borderDash:[4,4],pointRadius:3},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e',boxWidth:10,font:{size:11}}}},
+      scales:{r:{ticks:{color:'#8b949e',backdropColor:'transparent',font:{size:9}},grid:{color:'#21262d'},pointLabels:{color:'#8b949e',font:{size:11}},min:0,max:100}}
+    }
+  });
+}
+
+function buildGapTable(required, preferred, userHas, reqMissing, prefMissing) {
+  const all = [
+    ...required.map(s=>({name:s,type:'required',have:userHas.includes(s)})),
+    ...preferred.filter(s=>!required.includes(s)).map(s=>({name:s,type:'preferred',have:userHas.includes(s)})),
+  ];
+
+  const missing = all.filter(s=>!s.have).length;
+  document.getElementById('gap-summary-label').textContent =
+    `${all.filter(s=>s.have).length}/${all.length} covered · ${missing} gaps`;
+
+  document.getElementById('gap-table').innerHTML = all.map(s=>{
+    const pct = s.have?100:s.type==='required'?0:30;
+    const color = s.have?'var(--green)':s.type==='required'?'var(--red)':'var(--yellow)';
+    const label = s.have?'✓ Have it':s.type==='required'?'⚠ Required':'+ Preferred';
+    return `<div class="gap-row">
+      <div class="gap-name">${s.name}<span style="font-size:11px;color:var(--muted);margin-left:6px">${s.type}</span></div>
+      <div class="gap-bar-wrap"><div class="gap-bar" style="width:${pct}%;background:${color}"></div></div>
+      <div class="gap-status" style="color:${color}">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildRoadmap(reqMissing, prefMissing) {
+  const phases = [
+    {
+      phase:'Phase 1 · Now', color:'var(--red)',
+      title: reqMissing.length ? `Fill Critical Gaps` : 'Strengthen Foundations',
+      items: reqMissing.length ? reqMissing.slice(0,4).map(s=>`• Learn ${s}`) : ['• Build portfolio projects','• Practice system design'],
+      time: '0–2 months'
+    },
+    {
+      phase:'Phase 2 · Next', color:'var(--yellow)',
+      title: 'Build Preferred Skills',
+      items: prefMissing.slice(0,4).map(s=>`• Explore ${s}`),
+      time: '2–4 months'
+    },
+    {
+      phase:'Phase 3 · Future', color:'var(--green)',
+      title: 'Apply & Specialize',
+      items: ['• Build 2–3 portfolio projects','• Open source contributions','• Start applying to roles','• Prepare for interviews'],
+      time: '4–6 months'
+    }
+  ];
+  document.getElementById('roadmap-label').textContent = `~${reqMissing.length?'4-6':'2-4'} months to job-ready`;
+  document.getElementById('roadmap').innerHTML = phases.map(p=>`
+    <div class="roadmap-card">
+      <div class="roadmap-phase" style="color:${p.color}">${p.phase}</div>
+      <div class="roadmap-title">${p.title}</div>
+      <div class="roadmap-items">${p.items.join('<br>')}</div>
+      <div class="roadmap-time">⏱ ${p.time}</div>
+    </div>`).join('');
+}
+
+function buildInsights(match, reqHave, reqMissing, prefHave, prefMissing) {
+  const role = selectedRole.name;
+  const insights = [];
+
+  if (match >= 80) insights.push({color:'var(--green)',icon:'🚀',title:'You\'re job-ready',body:`With ${match}% match, you're competitive for ${role} roles right now. Focus on portfolio projects and interview prep rather than learning new skills.`});
+  else if (match >= 60) insights.push({color:'var(--accent)',icon:'📈',title:'Strong foundation',body:`${match}% match shows solid fundamentals. ${reqMissing.length} required skills to add — dedicate 2-3 months to close the gap and you'll be highly competitive.`});
+  else insights.push({color:'var(--yellow)',icon:'🌱',title:'Structured growth path',body:`At ${match}% match, a focused 4-6 month plan will get you job-ready. Prioritize: ${reqMissing.slice(0,3).join(', ')}.`});
+
+  if (reqHave.length === selectedRole.required.length) insights.push({color:'var(--green)',icon:'✅',title:'All core skills covered',body:`You have every required skill for ${role}. This puts you in the top applicant pool. Now focus on preferred skills and real-world projects.`});
+  if (selectedSkills.size > 15) insights.push({color:'var(--purple)',icon:'💎',title:'Broad skillset advantage',body:`With ${selectedSkills.size} skills, you have strong breadth. This is valuable for ${role} roles at startups and cross-functional teams.`});
+  if (reqMissing.length <= 2) insights.push({color:'var(--accent)',icon:'🎯',title:'Almost there',body:`Only ${reqMissing.length} required skill${reqMissing.length===1?'':'s'} to learn: ${reqMissing.join(', ')}. A few weeks of focused learning closes this gap.`});
+
+  document.getElementById('ai-insights').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">` +
+    insights.map(i=>`<div style="background:${i.color}11;border:1px solid ${i.color}33;border-radius:8px;padding:14px">
+      <div style="color:${i.color};font-size:12px;font-weight:700;margin-bottom:6px">${i.icon} ${i.title.toUpperCase()}</div>
+      <div style="font-size:13px;line-height:1.6;color:var(--text)">${i.body}</div>
+    </div>`).join('') + `</div>`;
+}
+
+function exportReport() {
+  const text = `SkillGraph Career Report\n${'='.repeat(40)}\nRole: ${selectedRole?.name}\nMatch: ${document.getElementById('match-pct')?.textContent}\n\n${document.getElementById('gap-table')?.innerText}`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text],{type:'text/plain'}));
+  a.download = 'skillgraph-report.txt'; a.click();
+}
+
+function resetAll() {
+  selectedSkills.clear(); selectedRole=null;
+  document.querySelectorAll('.skill-chip').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('selected-count').textContent='0 skills selected';
+  goToStep1();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+buildSkillUI();
+buildRoleUI();
+</script>
+</body>
+</html>
